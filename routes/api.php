@@ -5,6 +5,7 @@ use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\LogoutController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -15,8 +16,12 @@ Route::get('users', function () {
 })->name('user');
 Route::post('register', [UserController::class, 'register'])->name('register');
 Route::post('login', [UserController::class, 'login'])->name('login');
-Route::get('tasks', [TaskController::class, 'index']);
-Route::post('tasks', [TaskController::class, 'store']);
-Route::get('tasks', [TaskController::class, 'show']);
-Route::put('tasks', [TaskController::class, 'update']);
-Route::delete('tasks', [TaskController::class, 'destroy']);
+
+Route::controller(TaskController::class)->middleware('auth:sanctum')->group(function () {
+    Route::get('tasks', 'index');
+    Route::post('tasks/store', 'store');
+    Route::put('tasks/update/{id}', 'update');
+    Route::delete('tasks/destroy/{id}', 'destroy');
+    Route::get('find-my-tasks', 'findMyTask');
+    Route::post('logout', 'logout');
+});
