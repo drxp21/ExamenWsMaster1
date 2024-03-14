@@ -51,7 +51,7 @@ class UserController extends Controller
     }
 
     /**
-     * Se déconnection
+     * Se déconnecter
      */
     public function logout(Request $request)
     {
