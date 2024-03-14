@@ -9,6 +9,9 @@ use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    /**
+     * Se connecter
+     */
     public function login(Request $request)
     {
         $request->validate([
@@ -26,6 +29,10 @@ class UserController extends Controller
 
         return $user->createToken(time())->plainTextToken;
     }
+
+    /**
+     * S'inscrire
+     */
     public function register(Request $request)
     {
         $request->validate([
@@ -41,5 +48,19 @@ class UserController extends Controller
         ]);
 
         return $user->createToken(time())->plainTextToken;
+    }
+
+    /**
+     * Se déconnection
+     */
+    public function logout(Request $request)
+    {
+        $request->user()->tokens()->delete();
+
+        $response = [
+            'message' => 'Déconnexion réussie'
+        ];
+
+        return $response;
     }
 }
