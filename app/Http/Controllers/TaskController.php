@@ -52,14 +52,8 @@ class TaskController extends Controller
         $request->validate([
             'name' => 'required'
         ]);
-        $user = $request->user();
-
-        $task = Task::find($id);
-        $task->name = $request->name;
-        $task->status = 'finished';
-        $task->user_id = $user->id;
-        $task->save();
-        return $task;
+        Task::find($id)->update($request->all());
+        return Task::find($id);
     }
 
     /**
@@ -68,5 +62,16 @@ class TaskController extends Controller
     public function destroy(string $id)
     {
         Task::find($id)->delete();
+    }
+
+    /**
+     * Toggle the current status of the task.
+     */
+    public function toggle_status(string $id)
+    {
+        $task = Task::find($id);
+        $task->status = $task->status == 'pending' ? 'finished' : 'pending';
+        $task->save();
+        return $task;
     }
 }
