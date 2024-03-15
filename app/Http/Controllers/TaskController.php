@@ -15,7 +15,7 @@ class TaskController extends Controller
     {
         $user = auth()->user();
         $tasks = $this->loadTasksFromFile($user);
-        return response()->json($tasks);
+        return response()->json(['message' => 'La liste des taches de ' . $user->name, 'Tasks' => $tasks]);
     }
 
 
@@ -24,8 +24,9 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
+
         $request->validate([
-            'name' => 'required|unique:tasks,name'
+            'name' => 'required|unique:tasks,name,NULL,id,user_id,' . $request->user()->id
         ]);
         $user = $request->user();
         $task = Task::create([
@@ -33,9 +34,12 @@ class TaskController extends Controller
             'user_id' => $user->id,
             'status' => 'pending',
         ]);
+        if (!$task) {
+            return response()->json(['error' => 'Erreur lors de la création de la tâche'], 500);
+        }
         $tasks = $user->tasks;
         $this->saveTasksToFile($user, $tasks);
-        return $task;
+        return response()->json(['message' => 'Tâche créée avec succès', 'task' => $task], 201);
     }
 
     /**
@@ -43,7 +47,12 @@ class TaskController extends Controller
      */
     public function show(string $id)
     {
-        return Task::find($id);
+        $task = Task::find($id);
+        if ($task) {
+            return response()->json(['message' => 'La tache :', 'task' => $task], 200);
+        }
+
+        return response()->json(['error' => 'Tâche non trouvée'], 404);
     }
 
     /**
@@ -56,23 +65,32 @@ class TaskController extends Controller
         ]);
         $user = $request->user();
 
-        $task = Task::findOrFail($id)->update($request->all());
+        $task = Task::find($id);
 
-        $task->name = $request->name;
-        $task->status = $request->status;
-        $task->save();
-
-        $tasks = $this->loadTasksFromFile($user);
-
-        foreach ($tasks as &$taskItem) {
-            if ($taskItem['id'] == $id) {
-                $taskItem['name'] = $task->name;
-                $taskItem['status'] = $task->status;
-                break;
-            }
+        if (!$task) {
+            return response()->json(['error' => 'Tâche non trouvée'], 404);
         }
-        $this->saveTasksToFile($user, $tasks);
-        return response()->json($task, 200);
+
+        $oldTaskData = $task->toArray();
+        $task->update($request->all());
+
+        $newTaskData = $task->toArray();
+
+        $changesDetected = !empty(array_diff_assoc($oldTaskData, $newTaskData));
+        if ($changesDetected) {
+
+            $tasks = $this->loadTasksFromFile($user);
+            foreach ($tasks as &$taskItem) {
+                if ($taskItem['id'] == $id) {
+                    $taskItem['name'] = $task->name;
+                    $taskItem['status'] = $task->status;
+                    break;
+                }
+            }
+            $this->saveTasksToFile($user, $tasks);
+            return response()->json(['message' => 'La tâche a été mise à jour avec succès', 'task' => $task], 200);
+        }
+        return response()->json(['message' => 'La tâche n\'a subi aucun changement'], 200);
     }
 
     /**
@@ -80,11 +98,45 @@ class TaskController extends Controller
      */
     public function destroy(string $id)
     {
-        Task::find($id)->delete();
-        $user = auth()->user();
-        $tasks = $user->tasks;
-        $this->saveTasksToFile($user, $tasks);
-        return response()->json(['message' => 'Tache supprimée avec succès']);
+        $found = Task::find($id);
+        if ($found) {
+            $found->delete();
+            $user = auth()->user();
+            $tasks = $user->tasks;
+            $this->saveTasksToFile($user, $tasks);
+            return response()->json(['message' => 'Tâche supprimée avec succès']);
+        }
+        return response()->json(['message' => 'Tâche inexistante']);
+    }
+    /**
+     * Recuperer les taches finies
+     */
+    public function finished_tasks(Request $request)
+    {
+        $user = $request->user();
+
+        $finishedTasks = Task::where('user_id', $user->id)
+            ->where('status', 'finished')
+            ->get();
+        if ($finishedTasks->isEmpty()) {
+            return response()->json(['message' => 'Aucune tâche finie trouvée pour cet utilisateur'], 404);
+        }
+        return response()->json(['message' => 'Liste des taches finies de ' . $user->name, 'Tasks' => $finishedTasks]);
+    }
+    /**
+     * Recuperer les taches en attente
+     */
+    public function pending_tasks(Request $request)
+    {
+        $user = $request->user();
+
+        $pendingTasks = Task::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->get();
+        if ($pendingTasks->isEmpty()) {
+            return response()->json(['message' => 'Aucune tâche en attente trouvée pour cet utilisateur'], 404);
+        }
+        return response()->json(['message' => 'Liste des taches en attente de ' . $user->name, 'Tasks' => $pendingTasks]);
     }
 
     public function loadUserTasks(Request $request)
@@ -114,8 +166,16 @@ class TaskController extends Controller
     public function toggle_status(string $id)
     {
         $task = Task::find($id);
+        if (!$task) {
+            return response()->json(['error' => 'Tâche non trouvée'], 404);
+        }
         $task->status = $task->status == 'pending' ? 'finished' : 'pending';
         $task->save();
-        return $task;
+        return response()->json([
+            'message' => 'Statut de la tâche mis à jour avec succès',
+            'ID task' => $task->id,
+            'Statut tache' => $task->status
+
+        ]);
     }
 }

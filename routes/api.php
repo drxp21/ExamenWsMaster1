@@ -24,4 +24,6 @@ Route::controller(TaskController::class)->middleware(['auth:sanctum'])->group(fu
     Route::put('tasks/{id}',  'update');
     Route::delete('tasks/{id}',  'destroy');
     Route::put('tasks/{id}/toggle-status',  'toggle_status');
+    Route::get('finished', 'finished_tasks');
+    Route::get('pending', 'pending_tasks');
 });
