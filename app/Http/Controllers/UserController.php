@@ -51,6 +51,20 @@ class UserController extends Controller
     }
 
     /**
+     * Liste des utilisateurs
+     */
+    public function index()
+    {
+        $users = User::all();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Liste des utilisateurs récupérée avec succès',
+            'data' => $users
+        ], 200);
+    }
+
+    /**
      * Se déconnecter
      */
     public function logout(Request $request)

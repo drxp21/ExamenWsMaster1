@@ -14,6 +14,7 @@ Route::get('/user', function (Request $request) {
 Route::get('users', function () {
     return User::all();
 })->name('user');
+Route::get('users', [UserController::class, 'index']);
 Route::post('register', [UserController::class, 'register'])->name('register');
 Route::post('login', [UserController::class, 'login'])->name('login');
 Route::post('logout', [UserController::class, 'logout'])->name('logout');
